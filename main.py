@@ -1,8 +1,10 @@
-
+#Importing Modules
 from tkinter import *
+#For Music
 import pygame
 from tkinter import filedialog
 import time
+#For the music playtime
 from mutagen.mp3 import MP3
 from tkinter import ttk
 import os
@@ -18,7 +20,7 @@ def add_song():
     global current_song
     global song_list
     global my_menu
-    song_dir=filedialog.askdirectory(title="Select Folder",initialdir="~/Music/")
+    song_dir=filedialog.askdirectory(title="Select Folder",initialdir="~/Downloads/")
     for song in os.listdir(song_dir):
         name,ext=os.path.splitext(song)
         if ext==".mp3":
@@ -28,46 +30,54 @@ def add_song():
     my_menu.entryconfig(1,state="disabled")
     my_menu.entryconfig(2,state="normal")
     back_btn.config(state="normal")
-    play_btn.config(state="normal")
+    play_pause_btn.config(state="normal")
     next_btn.config(state="normal")
-    current_music=song_list.select_set(0)
-    current_music=song_list.activate(0)
+    song_list.select_set(0)
+    song_list.activate(0)
 
+#to restrict mouse clicks on listboxes
 def no_op( event):
-        # Prevent the default action from occurring
         return "break"
 
 #delete a song function
 def delete_song():
-          stop()
-          play_btn.config(state="normal")
-          song_list.delete(ACTIVE)
-          pygame.mixer.music.stop()
-          song_list.select_set(0)
-          song_list.activate(0)
-          status_label.config(text="")
-          if song_list.size()==0:
+        stop()
+        global playing
+        playing=False
+        global paused
+        paused=False
+        play_pause_btn.config(command=playy, image=pla)
+        play_pause_btn.config(state="normal")
+        song_list.delete(ACTIVE)
+        pygame.mixer.music.stop()
+        song_list.select_set(0)
+        song_list.activate(0)
+        status_label.config(text="")
+        if song_list.size()==0:
                     my_menu.entryconfig(1,state="normal")
                     my_menu.entryconfig(2,state="disabled")
                     back_btn.config(state="disabled")
-
-                    play_btn.config(state="disabled")
+                    play_pause_btn.config(state="disabled")
                     next_btn.config(state="disabled")  
 
 
      
 #delete all songs function
 def delete_all_songs():
-     stop()
-     status_label.config(text="")
-     song_list.delete(0,END)
-     pygame.mixer_music.fadeout(1)
-     my_menu.entryconfig(1,state="normal")
-     my_menu.entryconfig(2,state="disabled")
-     back_btn.config(state="disabled")
-     
-     play_btn.config(state="disabled")
-     next_btn.config(state="disabled")    
+    global playing
+    playing=False
+    global paused
+    paused=False
+    play_pause_btn.config(command=playy, image=pla)
+    stop()
+    status_label.config(text="")
+    song_list.delete(0,END)
+    pygame.mixer_music.fadeout(1)
+    my_menu.entryconfig(1,state="normal")
+    my_menu.entryconfig(2,state="disabled")
+    back_btn.config(state="disabled")
+    play_pause_btn.config(state="disabled")
+    next_btn.config(state="disabled")    
 
 #Play time
 
@@ -76,7 +86,6 @@ global stopped
 stopped=False
 def stop():
     status_bar.config(text="")
- 
     pygame.mixer.music.stop()
     song_list.selection_clear(ACTIVE)
     status_bar.config(text="")
@@ -94,47 +103,66 @@ def backk():
               pass
          else:
             next_one=next_song[0]-1
+            song_list.see(next_one)
             song=song_list.get(next_one)
-            if status_label.cget("text") == song:
+            if status_label.cget("text") == song and not paused:
                 play_pause_toggle()
             else:
-                global playing
-                play_btn.config(command=playy, image=pla)
-                playing = False  # Set playing to False
-
+                if status_label.cget("text") == song:
+                        play_pause_btn.config(command=pausee,image=pla)
+                else:
+                    global playing
+                    play_pause_btn.config(command=playy, image=pla)
+                    playing = False 
             song_list.selection_clear(0,END)
             song_list.activate(next_one)
             song_list.selection_set(next_one,last=None)
- 
-     except Exception as e:
-          print(e)
+     except:
+        song_list.activate(0)
+        song_list.selection_set(0, last=None)
+
 def nextt():
-     global song_dir
-     try:
-         global song_list
-         song=song_list.get(ACTIVE)
-         next_song=song_list.curselection()
-         if next_song[0]+1>=song_list.size():
-              pass
-         else:
-            next_one=next_song[0]+1
-            song=song_list.get(next_one)
-            if status_label.cget("text") == song:
-                play_pause_toggle()
-            else:
-                play_btn.config( command=playy, image=pla)
-                global playing
-                playing = False  # Set playing to False
+        global song_dir
+        global song_list
+        song=song_list.get(ACTIVE)
+        next_song=song_list.curselection()
+        if next_song:
+            try:
+                if next_song[0]+1>=song_list.size():
+                    pass
+                else:
+                    next_one=next_song[0]+1
+                    song_list.see(next_one)
+                    song=song_list.get(next_one)
+                    if status_label.cget("text") == song and not paused:
+                        play_pause_toggle()
+                    else:
+                        if status_label.cget("text") == song:          
+                            play_pause_btn.config(command=pausee,image=pla)
+                        else:
+                                global playing
+                                play_pause_btn.config(command=playy, image=pla)
+                                playing = False 
 
-            song_list.selection_clear(0,END)
-            song_list.activate(next_one)
-            song_list.selection_set(next_one,last=None)
-            
-     except Exception as e:
-          print(e)
+                    song_list.selection_clear(0,END)
+                    song_list.activate(next_one)
+                    song_list.selection_set(next_one,last=None)
+            except:
+                 pass
+        else:
+            song_list.activate(0)
+            song_list.selection_set(0, last=None)
+
+
+global playing
+playing=False
+global paused
+paused=False
 
 
 def playy():
+        global paused
+        paused=False     
         song=song_list.get(ACTIVE)
         global song_dir
         try: 
@@ -144,24 +172,22 @@ def playy():
                     global playing
                     if not playing:
                         pygame.mixer.music.play()
-                    
                     status_label.config(text=song)
                     play_pause_toggle()
 ##                    song_position=int(song_length)  
         except EXCEPTION as e:
                     print(e)
-global paused
-paused=False      
+      
 def pausee():
      global paused
      if paused == False:
         pygame.mixer_music.pause()
         paused =True
-        play_btn.config(image=pla)
+        play_pause_btn.config(image=pla)
      else:
             pygame.mixer_music.unpause()
             paused=False
-            play_btn.config(image=pau)
+            play_pause_btn.config(image=pau)
 vol_bool=False
 def vol():
      global vol_bool
@@ -174,16 +200,15 @@ def vol():
 
 def volume(x):
     pygame.mixer.music.set_volume((vol_slider.get()/100))
-global playing
-playing=False
+
 def play_pause_toggle():
     global playing
     if playing:
-        play_btn.config( command=playy, image=pla)
+        play_pause_btn.config( command=playy, image=pla)
         playing = False
         # Add the logic to pause the song here
     else:
-        play_btn.config( command=pausee, image=pau)
+        play_pause_btn.config( command=pausee, image=pau)
         playing = True
         # Add the logic to play the song here
 
@@ -212,11 +237,13 @@ wong_list=[]
 vol_slider=ttk.Scale(display_frame,from_=100,to=0,value=50,orient=VERTICAL,length=400,command=volume)
 vol_slider.grid(padx=10,row=0,column=1,sticky=E)
 #=====
+
 songg=""
 status_label=Label(window)
 status_label.pack()
 #-----
-#status
+
+#Play Time status
 status_bar=Label(window,text="00:00",bd=1,relief=GROOVE,anchor=E)
 status_bar.pack(fill=X,ipady=2,side=BOTTOM)
 
@@ -226,42 +253,43 @@ control_panel=Frame(window)
 control_panel.pack()
 global back_btn
 global next_btn
-global play_btn
+global play_pause_btn
 back_btn=Button(control_panel,image=bac,command=backk,borderwidth=0)
 back_btn.grid(row=0,column=0,padx=10)
 next_btn=Button(control_panel,image=nex,command=nextt,borderwidth=0)
 next_btn.grid(row=0,column=3,padx=5)
-play_btn=Button(control_panel,image=pla,command=playy,borderwidth=0)
-play_btn.grid(row=0,column=2,padx=10)
-# pause_btn=Button(control_panel,image=pau,command=pausee,borderwidth=0)
-# pause_btn.grid(row=0,column=1,padx=10)
+play_pause_btn=Button(control_panel,image=pla,command=playy,borderwidth=0)
+play_pause_btn.grid(row=0,column=2,padx=10)
 
 ##loop_btn=Button(control_panel,text="Loop",command=loop)
 ##loop_btn.grid(row=0,column=4,padx=10)
-###############THEMES###################################
-def default_theme():
-     window.configure(bg="lightblue")
-     back_btn.config(bg="lightblue",activebackground="lightblue")
-    #  pause_btn.config(bg="lightblue",activebackground="lightblue")
-     play_btn.config(bg="lightblue",activebackground="lightblue")
-     next_btn.config(bg="lightblue",activebackground="lightblue")
-     display_frame.config(bg="lightblue")
-     control_panel.config(bg="lightblue")
-     bac=PhotoImage(file="back_blue.png")
-     nex=PhotoImage(file="next_blue.png")
-     pla=PhotoImage(file="play_blue.png")
-     pau=PhotoImage(file="pause_blue.png")
-     back_btn.config(image=bac)
-    #  pause_btn.config(image=pau)
-     play_btn.config(image=pla)
-     next_btn.config(image=nex)
-     status_label.config(bg="lightblue")
 
+
+###############THEMES###################################
+
+def neon_theme():
+    window.configure(bg="#000000")
+    back_btn.config(bg="#00FFD1", activebackground="#00FFD1")  # Cyan
+    play_pause_btn.config(bg="#FF00FF", activebackground="#FF00FF")  # Magenta
+    next_btn.config(bg="#FFD700", activebackground="#FFD700")  # Gold
+    display_frame.config(bg="#000000")
+    control_panel.config(bg="#000000")
+    song_list.config(bg="#000000", fg="#00FFD1", selectbackground="blue")
+    # PhotoImage paths
+    global bac, nex, pla
+    bac = PhotoImage(file="assets/neon/previous.png")
+    nex = PhotoImage(file="assets/neon/next.png")
+    pla = PhotoImage(file="assets/neon/play.png")
+    # Apply images and configure buttons
+    back_btn.config(image=bac)
+    play_pause_btn.config(image=pla)
+    next_btn.config(image=nex)
+    # Status label
+    status_label.config(bg="#000000", fg="#00FFD1")  
 
 #==================================================
 back_btn.config(state="disabled")
-# pause_btn.config(state="disabled")
-play_btn.config(state="disabled")
+play_pause_btn.config(state="disabled")
 next_btn.config(state="disabled")
 
 #menu
@@ -282,7 +310,7 @@ my_menu.add_cascade(label="Theme",menu=add_themes)
 add_song_menu.add_command(label="Select the song",command=add_song)
 delete_song_menu.add_command(label="Delete a song",command=delete_song)
 delete_song_menu.add_command(label="Delete all the songs",command=delete_all_songs)
-add_themes.add_command(label="default",command=default_theme)
+add_themes.add_command(label="Neon",command=neon_theme)
 my_menu.entryconfig(2,state="disabled")
 
 window.mainloop()
