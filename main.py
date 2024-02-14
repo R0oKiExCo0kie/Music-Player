@@ -1,7 +1,7 @@
 #Importing Modules
 from tkinter import *
 #For Music
-import pygame
+import pygame as pg
 from tkinter import filedialog
 import time
 #For the music playtime
@@ -9,10 +9,18 @@ from mutagen.mp3 import MP3
 from tkinter import ttk
 import os
 
+
+global playing
+playing=False
+global paused
+paused=False
+global song_length
+song_length = 0 
+
 window=Tk()
 #window.resizable(False,False)
 window.title("Music Player 🎶")
-pygame.mixer.init()
+pg.mixer.init()
 songs=[]
 #song adding function
 def add_song():
@@ -34,6 +42,7 @@ def add_song():
     next_btn.config(state="normal")
     song_list.select_set(0)
     song_list.activate(0)
+    pos_slider.config(value=0)
 
 #to restrict mouse clicks on listboxes
 def no_op( event):
@@ -42,14 +51,10 @@ def no_op( event):
 #delete a song function
 def delete_song():
         stop()
-        global playing
-        playing=False
-        global paused
-        paused=False
         play_pause_btn.config(command=playy, image=pla)
         play_pause_btn.config(state="normal")
         song_list.delete(ACTIVE)
-        pygame.mixer.music.stop()
+        pg.mixer.music.stop()
         song_list.select_set(0)
         song_list.activate(0)
         status_label.config(text="")
@@ -64,15 +69,12 @@ def delete_song():
      
 #delete all songs function
 def delete_all_songs():
-    global playing
-    playing=False
-    global paused
-    paused=False
     play_pause_btn.config(command=playy, image=pla)
     stop()
+
     status_label.config(text="")
     song_list.delete(0,END)
-    pygame.mixer_music.fadeout(1)
+    pg.mixer_music.fadeout(1)
     my_menu.entryconfig(1,state="normal")
     my_menu.entryconfig(2,state="disabled")
     back_btn.config(state="disabled")
@@ -80,17 +82,56 @@ def delete_all_songs():
     next_btn.config(state="disabled")    
 
 #Play time
+def play_time():
+    if stopped:
+         return  
+    current_time = pg.mixer.music.get_pos()/1000
+    converted_time=time.strftime('%M:%S',time.gmtime(current_time))
+    #getting song length
+    song = status_label.cget("text")
+    song=os.path.join(song_dir,song+".mp3")
+    mut_song=MP3(song)
+    global song_length
+    song_length=mut_song.info.length
+    converted_length=time.strftime('%M:%S',time.gmtime(song_length))
+    current_time+=1
+    if paused:
+         pass
+    elif int(pos_slider.get())==int(song_length):
+        status_bar.config(text=f"{converted_time} of {converted_length}")
+
+    elif int(pos_slider.get()) == int(current_time):
+        pos_slider.config(value=int(current_time),to=int(song_length))
+    else:
+        pos_slider.config(value=int(pos_slider.get()),to=int(song_length))
+        converted_time=time.strftime('%M:%S',time.gmtime(int(pos_slider.get())))
+        status_bar.config(text=f"{converted_time} of {converted_length}")
+        #move slider by 1 sec
+        global sec
+        sec=int(pos_slider.get())+1
+        pos_slider.config(value=sec)
+    
+    
+    # status_bar.config(text=f"{converted_time} of {converted_length}")
+    #Update Slider POsition Value to current time
+  
+   
+    #new updated time
+    status_bar.after(1000,play_time)
+
 
 #stop function
 global stopped
 stopped=False
 def stop():
     status_bar.config(text="")
-    pygame.mixer.music.stop()
+    pos_slider.config(value=0)
+    pg.mixer.music.stop()
     song_list.selection_clear(ACTIVE)
     status_bar.config(text="")
     global stopped
     stopped=True
+    #CLEARING THE STATUS
                       
 #buttons functions
 def backk():
@@ -154,38 +195,38 @@ def nextt():
             song_list.selection_set(0, last=None)
 
 
-global playing
-playing=False
-global paused
-paused=False
-
 
 def playy():
-        global paused
-        paused=False     
+        global paused, playing, stopped
+        paused = False
+        stopped = False
         song=song_list.get(ACTIVE)
+        pos_slider.config(value=0)
         global song_dir
         try: 
                     current_music=song_list.get(ACTIVE)
                     status_label.config(text=current_music)
-                    pygame.mixer_music.load(os.path.join(song_dir,current_music+".mp3"))
+                    pg.mixer_music.load(os.path.join(song_dir,current_music+".mp3"))
                     global playing
                     if not playing:
-                        pygame.mixer.music.play()
+                        pg.mixer.music.play()
+                        if not song_length and not stopped:  # Only schedule play_time if it hasn't been scheduled yet
+                            play_time()
+
                     status_label.config(text=song)
                     play_pause_toggle()
 ##                    song_position=int(song_length)  
-        except EXCEPTION as e:
+        except Exception as e:
                     print(e)
       
 def pausee():
      global paused
      if paused == False:
-        pygame.mixer_music.pause()
+        pg.mixer_music.pause()
         paused =True
         play_pause_btn.config(image=pla)
      else:
-            pygame.mixer_music.unpause()
+            pg.mixer_music.unpause()
             paused=False
             play_pause_btn.config(image=pau)
 vol_bool=False
@@ -198,8 +239,28 @@ def vol():
           window.geometry("500x600")
           vol_bool=False
 
+# Add a global variable to track if the slider is being dragged
+
+# Function to handle slider value change
+def on_slider_change(event):
+    global dragging_slider ,dragged
+    dragging_slider = True
+    
+
+# Function to handle slider release
+def on_slider_release(event):
+    global dragging_slider ,dragged
+    dragging_slider = False
+    if not paused:  # Only load/play if the music is not paused
+        song = status_label.cget("text")
+        song = os.path.join(song_dir, song + ".mp3")
+        pg.mixer_music.load(song)
+        pg.mixer_music.play(start=int(pos_slider.get()))
+        
+# Update your slider binding
+
 def volume(x):
-    pygame.mixer.music.set_volume((vol_slider.get()/100))
+    pg.mixer.music.set_volume((vol_slider.get()/100))
 
 def play_pause_toggle():
     global playing
@@ -244,8 +305,14 @@ status_label.pack()
 #-----
 
 #Play Time status
-status_bar=Label(window,text="00:00",bd=1,relief=GROOVE,anchor=E)
+status_bar=Label(window,text='',bd=1,relief=GROOVE,anchor=E)
 status_bar.pack(fill=X,ipady=2,side=BOTTOM)
+
+#POsition SLider
+pos_slider=ttk.Scale(window,from_=0,to=100,length=400,orient=HORIZONTAL,value=0)
+pos_slider.pack(pady=10)
+pos_slider.bind("<B1-Motion>", on_slider_change)
+pos_slider.bind("<ButtonRelease-1>", on_slider_release)
 
 #Control panel with buttons
 
@@ -307,7 +374,7 @@ my_menu.add_cascade(label="Remove songs",menu=delete_song_menu)
 my_menu.add_cascade(label="Volume",command=vol)
 my_menu.add_cascade(label="Theme",menu=add_themes)
 #adding submenu_label
-add_song_menu.add_command(label="Select the song",command=add_song)
+add_song_menu.add_command(label="Select Folder",command=add_song)
 delete_song_menu.add_command(label="Delete a song",command=delete_song)
 delete_song_menu.add_command(label="Delete all the songs",command=delete_all_songs)
 add_themes.add_command(label="Neon",command=neon_theme)
