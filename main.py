@@ -8,7 +8,7 @@ import time
 from mutagen.mp3 import MP3
 from tkinter import ttk
 import os
-
+import traceback
 
 global playing
 playing=False
@@ -51,13 +51,16 @@ def no_op( event):
 #delete a song function
 def delete_song():
         stop()
+        global playing,paused,stopped
+        playing=False
+        paused =False
         play_pause_btn.config(command=playy, image=pla)
         play_pause_btn.config(state="normal")
         song_list.delete(ACTIVE)
-        pg.mixer.music.stop()
         song_list.select_set(0)
         song_list.activate(0)
-        status_label.config(text="")
+        song=song_list.get(ACTIVE)
+        status_label.config(text=song)
         if song_list.size()==0:
                     my_menu.entryconfig(1,state="normal")
                     my_menu.entryconfig(2,state="disabled")
@@ -83,33 +86,34 @@ def delete_all_songs():
 
 #Play time
 def play_time():
-    if stopped:
-         return  
-    current_time = pg.mixer.music.get_pos()/1000
-    converted_time=time.strftime('%M:%S',time.gmtime(current_time))
-    #getting song length
-    song = status_label.cget("text")
-    song=os.path.join(song_dir,song+".mp3")
-    mut_song=MP3(song)
-    global song_length
-    song_length=mut_song.info.length
-    converted_length=time.strftime('%M:%S',time.gmtime(song_length))
-    current_time+=1
-    if paused:
-         pass
-    elif int(pos_slider.get())==int(song_length):
-        status_bar.config(text=f"{converted_time} of {converted_length}")
+    try:
+        if stopped:
+             return
+        current_time = pg.mixer.music.get_pos()/1000
+        converted_time=time.strftime('%M:%S',time.gmtime(current_time))
+        #getting song length
+        song = status_label.cget("text")
+        song=os.path.join(song_dir,song+".mp3")
+        mut_song=MP3(song)
+        global song_length
+        song_length=mut_song.info.length
+        converted_length=time.strftime('%M:%S',time.gmtime(song_length))
+        current_time+=1
+        if paused:
+            pass
+        elif int(pos_slider.get())==int(song_length):
+            status_bar.config(text=f"{converted_time} of {converted_length}")
 
-    elif int(pos_slider.get()) == int(current_time):
-        pos_slider.config(value=int(current_time),to=int(song_length))
-    else:
-        pos_slider.config(value=int(pos_slider.get()),to=int(song_length))
-        converted_time=time.strftime('%M:%S',time.gmtime(int(pos_slider.get())))
-        status_bar.config(text=f"{converted_time} of {converted_length}")
-        #move slider by 1 sec
-        global sec
-        sec=int(pos_slider.get())+1
-        pos_slider.config(value=sec)
+        elif int(pos_slider.get()) == int(current_time):
+            pos_slider.config(value=int(current_time),to=int(song_length))
+        else:
+            pos_slider.config(value=int(pos_slider.get()),to=int(song_length))
+            converted_time=time.strftime('%M:%S',time.gmtime(int(pos_slider.get())))
+            status_bar.config(text=f"{converted_time} of {converted_length}")
+            #move slider by 1 sec
+            global sec
+            sec=int(pos_slider.get())+1
+            pos_slider.config(value=sec)
     
     
     # status_bar.config(text=f"{converted_time} of {converted_length}")
@@ -117,20 +121,23 @@ def play_time():
   
    
     #new updated time
-    status_bar.after(1000,play_time)
-
+        status_bar.after(1000,play_time)
+    except Exception as e:
+        traceback.print_exc()
+        print("An error occurred: ", e)
 
 #stop function
 global stopped
 stopped=False
 def stop():
+    global stopped
+    stopped=True
     status_bar.config(text="")
     pos_slider.config(value=0)
     pg.mixer.music.stop()
     song_list.selection_clear(ACTIVE)
     status_bar.config(text="")
-    global stopped
-    stopped=True
+
     #CLEARING THE STATUS
                       
 #buttons functions
@@ -199,22 +206,21 @@ def nextt():
 def playy():
         global paused, playing, stopped
         paused = False
-        stopped = False
+        stopped=False
         song=song_list.get(ACTIVE)
         pos_slider.config(value=0)
         global song_dir
         try: 
-                    current_music=song_list.get(ACTIVE)
-                    status_label.config(text=current_music)
-                    pg.mixer_music.load(os.path.join(song_dir,current_music+".mp3"))
-                    global playing
-                    if not playing:
+            status_label.config(text=song)
+            pg.mixer_music.load(os.path.join(song_dir,song+".mp3"))
+            global playing
+            if not playing and not stopped:
                         pg.mixer.music.play()
-                        if not song_length and not stopped:  # Only schedule play_time if it hasn't been scheduled yet
+                        if not song_length:  # Only schedule play_time if it hasn't been scheduled yet
                             play_time()
-
-                    status_label.config(text=song)
-                    play_pause_toggle()
+                            
+                        status_label.config(text=song)
+                        play_pause_toggle()
 ##                    song_position=int(song_length)  
         except Exception as e:
                     print(e)
